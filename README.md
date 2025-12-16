@@ -237,3 +237,70 @@
 
         // Camera Scroll (Infinite World)
         if (meerkat.y < canvas.height / 2) {
+            let shift = (canvas.height / 2) - meerkat.y;
+            meerkat.y = canvas.height / 2;
+            score += Math.floor(shift);
+            document.getElementById('score').innerText = "CAP: $" + score.toLocaleString();
+
+            platforms.forEach(p => {
+                p.y += shift;
+                if (p.y > canvas.height) {
+                    p.y = -10;
+                    p.x = Math.random() * (canvas.width - 60);
+                }
+            });
+        }
+
+        // Game Over
+        if (meerkat.y > canvas.height) {
+            endGame();
+        }
+
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw Platforms
+        platforms.forEach(p => drawPlatform(p));
+
+        // Draw Custom Meerkat
+        drawMeerkat(meerkat.x, meerkat.y, meerkat.w, meerkat.h);
+    }
+
+    function startGame() {
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('gameOverScreen').classList.add('hidden');
+        score = 0;
+        meerkat.y = canvas.height - 150;
+        meerkat.vy = 0;
+        initPlatforms();
+        gameRunning = true;
+        update();
+    }
+
+    function resetGame() {
+        startGame();
+    }
+
+    function endGame() {
+        gameRunning = false;
+        document.getElementById('finalScore').innerText = "$" + score.toLocaleString();
+        document.getElementById('gameOverScreen').classList.remove('hidden');
+    }
+
+    // Initial Render
+    draw();
+
+    // Handle Window Resize (if user rotates phone)
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        draw();
+    });
+
+</script>
+</body>
+</html>
