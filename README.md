@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -10,10 +8,10 @@
             margin: 0;
             padding: 0;
             background-color: #0f172a;
-            overflow: hidden; /* No scrolling allowed */
-            touch-action: none; /* Disables browser gestures */
+            overflow: hidden;
+            touch-action: none;
             font-family: 'Courier New', Courier, monospace;
-            height: 100dvh; /* Dynamic viewport height for mobile browsers */
+            height: 100dvh;
             width: 100vw;
             display: flex;
             justify-content: center;
@@ -26,14 +24,13 @@
             height: 100%;
         }
 
-        /* UI Overlays */
         #ui-layer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* Let clicks pass through to canvas */
+            pointer-events: none;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -41,7 +38,7 @@
 
         #scoreBoard {
             text-align: center;
-            margin-top: 40px; /* Space for notches */
+            margin-top: 40px;
             color: #fff;
             font-size: 20px;
             font-weight: bold;
@@ -52,6 +49,7 @@
             align-self: center;
             backdrop-filter: blur(4px);
             border: 1px solid #22c55e;
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
         }
 
         .screen-modal {
@@ -64,7 +62,7 @@
             border-radius: 16px;
             border: 2px solid #22c55e;
             text-align: center;
-            pointer-events: auto; /* Re-enable clicks */
+            pointer-events: auto;
             box-shadow: 0 0 50px rgba(34, 197, 94, 0.3);
             width: 80%;
             max-width: 350px;
@@ -94,18 +92,13 @@
 
         .hidden { display: none !important; }
         
-        /* Flashing effect for Rekt */
         .rekt { animation: shake 0.5s; }
         @keyframes shake {
             0% { transform: translate(-50%, -50%) translate(1px, 1px) rotate(0deg); }
             10% { transform: translate(-50%, -50%) translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-50%, -50%) translate(-3px, 0px) rotate(1deg); }
             30% { transform: translate(-50%, -50%) translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(-50%, -50%) translate(1px, -1px) rotate(1deg); }
             50% { transform: translate(-50%, -50%) translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-50%, -50%) translate(-3px, 1px) rotate(0deg); }
             70% { transform: translate(-50%, -50%) translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-50%, -50%) translate(-1px, -1px) rotate(1deg); }
             90% { transform: translate(-50%, -50%) translate(1px, 2px) rotate(0deg); }
             100% { transform: translate(-50%, -50%) translate(1px, -2px) rotate(-1deg); }
         }
@@ -122,24 +115,22 @@
             <h1>Meerkat Moon 🚀</h1>
             <p>Tap Left or Right to steer.</p>
             <p>Bounce on Green Candles.</p>
-            <button onclick="startGame()">HODL & JUMP</button>
+            <button onclick="startGame()">LAUNCH</button>
         </div>
 
         <div id="gameOverScreen" class="screen-modal hidden">
             <h1 style="color: #ef4444;">REKT! 📉</h1>
-            <p>You fell into the bear trap.</p>
+            <p>You missed the liquidity.</p>
             <p>Final Cap: <span id="finalScore" style="color:#22c55e; font-weight:bold;">$0</span></p>
-            <button onclick="startGame()">BUY THE DIP (RETRY)</button>
+            <button onclick="startGame()">BUY THE DIP</button>
         </div>
     </div>
 
 <script>
-    // --- TELEGRAM SETUP ---
     const tg = window.Telegram.WebApp;
-    tg.expand(); // Force full screen
+    tg.expand();
     tg.ready();
 
-    // --- ENGINE SETUP ---
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('scoreBoard');
@@ -148,8 +139,6 @@
     const finalScoreEl = document.getElementById('finalScore');
 
     let width, height;
-    
-    // Resize handling for mobile rotation/different screens
     function resize() {
         width = window.innerWidth;
         height = window.innerHeight;
@@ -159,23 +148,22 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // --- GAME STATE ---
+    // --- GAME VARIABLES ---
     let gameRunning = false;
     let score = 0;
     let platforms = [];
     let keys = { left: false, right: false };
 
-    // --- PHYSICS CONFIG ---
+    // --- REBALANCED PHYSICS (Slower & Easier) ---
     const CONFIG = {
-        gravity: 0.25,
-        speed: 6,
-        jumpForce: -9,
+        gravity: 0.15,      // Reduced from 0.25 (Floatier feel)
+        speed: 3.5,         // Reduced from 6.0 (More precise steering)
+        jumpForce: -7.5,    // Reduced from -9 (Balanced with new gravity)
         platformWidth: 70,
         platformHeight: 20,
-        platformGap: 110
+        platformGap: 100    // Reduced gap slightly for easier climbing
     };
 
-    // --- MEERKAT OBJECT ---
     let meerkat = {
         x: 0,
         y: 0,
@@ -183,11 +171,10 @@
         h: 50,
         vx: 0,
         vy: 0,
-        faceDir: 1 // 1 = right, -1 = left
+        faceDir: 1 
     };
 
-    // --- INPUT HANDLING (Touch & Keyboard) ---
-    // Touch - split screen logic
+    // --- INPUTS ---
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         handleInput(e.touches[0].clientX);
@@ -198,7 +185,7 @@
         handleInput(e.touches[0].clientX);
     }, {passive: false});
 
-    canvas.addEventListener('touchend', (e) => {
+    canvas.addEventListener('touchend', () => {
         keys.left = false;
         keys.right = false;
     });
@@ -213,7 +200,7 @@
         }
     }
 
-    // Keyboard (for desktop testing)
+    // Keyboard for testing
     window.addEventListener('keydown', (e) => {
         if (e.code === 'ArrowLeft') keys.left = true;
         if (e.code === 'ArrowRight') keys.right = true;
@@ -223,39 +210,46 @@
         if (e.code === 'ArrowRight') keys.right = false;
     });
 
-    // --- ASSET GENERATION ---
+    // --- GENERATION LOGIC ---
     function initPlatforms() {
         platforms = [];
         let count = Math.ceil(height / CONFIG.platformGap) + 1;
-        for (let i = 0; i < count; i++) {
+        
+        // 1. SAFETY PLATFORM: Always spawn one directly under the start position
+        platforms.push({
+            x: width / 2 - 35, // Centered
+            y: height - 100,
+            w: 70,
+            h: 20,
+            isMoving: false
+        });
+
+        // 2. Generate the rest
+        for (let i = 1; i < count; i++) {
             platforms.push({
                 x: Math.random() * (width - CONFIG.platformWidth),
                 y: height - (i * CONFIG.platformGap) - 100,
                 w: CONFIG.platformWidth,
                 h: CONFIG.platformHeight,
-                isMoving: score > 2000 && Math.random() > 0.7 // Difficulty scaling
+                isMoving: false // Disable moving platforms initially
             });
         }
     }
 
-    // --- DRAWING FUNCTIONS ---
-
-    // Custom Vector Meerkat
+    // --- DRAWING ---
     function drawMeerkat(x, y, w, h, dir) {
         ctx.save();
         ctx.translate(x + w/2, y + h/2);
-        
-        // Flip if facing left
         if(dir === -1) ctx.scale(-1, 1);
 
         // Body
-        ctx.fillStyle = '#D97706'; // Dark Gold
+        ctx.fillStyle = '#D97706'; 
         ctx.beginPath();
         ctx.ellipse(0, 10, w/2.2, h/2.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Belly Patch
-        ctx.fillStyle = '#FCD34D'; // Light Yellow
+        // Belly
+        ctx.fillStyle = '#FCD34D'; 
         ctx.beginPath();
         ctx.ellipse(0, 12, w/4, h/3, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -267,20 +261,19 @@
         ctx.fill();
 
         // Ears
-        ctx.fillStyle = '#78350F'; // Dark Brown
+        ctx.fillStyle = '#78350F'; 
         ctx.beginPath();
-        ctx.arc(-12, -22, 5, 0, Math.PI*2); // L
-        ctx.arc(12, -22, 5, 0, Math.PI*2);  // R
+        ctx.arc(-12, -22, 5, 0, Math.PI*2); 
+        ctx.arc(12, -22, 5, 0, Math.PI*2);  
         ctx.fill();
 
-        // Eyes (Mask)
+        // Eyes
         ctx.fillStyle = '#78350F';
         ctx.beginPath();
         ctx.ellipse(-6, -15, 6, 4, 0, 0, Math.PI*2);
         ctx.ellipse(6, -15, 6, 4, 0, 0, Math.PI*2);
         ctx.fill();
 
-        // Eyes (Pupils)
         ctx.fillStyle = '#000';
         ctx.beginPath();
         ctx.arc(-6, -15, 2, 0, Math.PI*2);
@@ -299,28 +292,21 @@
     }
 
     function drawCandle(p) {
-        // Wick
         ctx.fillStyle = '#14532d';
-        ctx.fillRect(p.x + p.w/2 - 1, p.y - 6, 2, 6);
-        
-        // Body (Green Candle)
+        ctx.fillRect(p.x + p.w/2 - 1, p.y - 6, 2, 6); // Wick
         ctx.fillStyle = '#22c55e';
-        ctx.fillRect(p.x, p.y, p.w, p.h);
-        
-        // Shine/Highlight
+        ctx.fillRect(p.x, p.y, p.w, p.h); // Body
         ctx.fillStyle = '#86efac';
-        ctx.fillRect(p.x + 2, p.y + 2, 4, p.h - 4);
-        
-        // Bottom Shadow
+        ctx.fillRect(p.x + 2, p.y + 2, 4, p.h - 4); // Highlight
         ctx.fillStyle = '#15803d';
-        ctx.fillRect(p.x, p.y + p.h, p.w, 4);
+        ctx.fillRect(p.x, p.y + p.h, p.w, 4); // Shadow
     }
 
-    // --- GAME LOOP ---
+    // --- UPDATE LOOP ---
     function update() {
         if (!gameRunning) return;
 
-        // 1. Movement
+        // MOVEMENT
         if (keys.left) {
             meerkat.x -= CONFIG.speed;
             meerkat.faceDir = -1;
@@ -334,28 +320,27 @@
         if (meerkat.x + meerkat.w < 0) meerkat.x = width;
         if (meerkat.x > width) meerkat.x = -meerkat.w;
 
-        // 2. Physics
+        // PHYSICS
         meerkat.vy += CONFIG.gravity;
         meerkat.y += meerkat.vy;
 
-        // 3. Collision
+        // COLLISIONS (Forgiving Hitbox)
         if (meerkat.vy > 0) {
             platforms.forEach(p => {
-                // Generous hitbox for fun gameplay
+                // Hitbox padding: Player is slightly wider than visual to help land jumps
                 if (
-                    meerkat.x + meerkat.w * 0.7 > p.x &&
-                    meerkat.x + meerkat.w * 0.3 < p.x + p.w &&
+                    meerkat.x + meerkat.w * 0.5 > p.x && 
+                    meerkat.x + meerkat.w * 0.5 < p.x + p.w &&
                     meerkat.y + meerkat.h > p.y &&
-                    meerkat.y + meerkat.h < p.y + p.h + 10 // +10 tolerance
+                    meerkat.y + meerkat.h < p.y + p.h + 15 // Increased detection range
                 ) {
                     meerkat.vy = CONFIG.jumpForce;
-                    // Haptic Feedback (Telegram only)
                     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
                 }
             });
         }
 
-        // 4. Scrolling / Score
+        // CAMERA SCROLL
         if (meerkat.y < height / 2.5) {
             let shift = (height / 2.5) - meerkat.y;
             meerkat.y = height / 2.5;
@@ -364,21 +349,18 @@
 
             platforms.forEach(p => {
                 p.y += shift;
-                
-                // Difficulty: Moving platforms
-                if(p.isMoving) {
-                    p.x += Math.sin(Date.now() / 500) * 2;
-                }
+                if(p.isMoving) p.x += Math.sin(Date.now() / 800) * 1.5; // Slower moving platforms
 
                 if (p.y > height) {
                     p.y = -20;
                     p.x = Math.random() * (width - CONFIG.platformWidth);
-                    p.isMoving = score > 3000 && Math.random() > 0.6; // Incr difficulty
+                    // Only introduce moving platforms after score > 3000
+                    p.isMoving = score > 3000 && Math.random() > 0.8; 
                 }
             });
         }
 
-        // 5. Game Over
+        // GAME OVER
         if (meerkat.y > height) {
             gameOver();
         }
@@ -388,17 +370,13 @@
     }
 
     function draw() {
-        // Gradient Background
         let grad = ctx.createLinearGradient(0, 0, 0, height);
         grad.addColorStop(0, '#020617');
         grad.addColorStop(1, '#1e293b');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, width, height);
 
-        // Draw Platforms
         platforms.forEach(p => drawCandle(p));
-
-        // Draw Meerkat
         drawMeerkat(meerkat.x, meerkat.y, meerkat.w, meerkat.h, meerkat.faceDir);
     }
 
@@ -410,11 +388,13 @@
         score = 0;
         scoreEl.innerText = "Market Cap: $0";
         
+        resize(); // Ensure size is correct on start
         initPlatforms();
         
+        // Spawn player above the safe platform
         meerkat.x = width / 2 - 20;
-        meerkat.y = height - 200;
-        meerkat.vy = -5; // Initial pop
+        meerkat.y = height - 250;
+        meerkat.vy = -5;
         
         gameRunning = true;
         update();
@@ -422,15 +402,11 @@
 
     function gameOver() {
         gameRunning = false;
-        
-        // Trigger Haptic "Heavy"
         if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-
         finalScoreEl.innerText = "$" + score.toLocaleString();
         endScrn.classList.remove('hidden');
         endScrn.classList.add('rekt');
     }
-
 </script>
 </body>
 </html>
