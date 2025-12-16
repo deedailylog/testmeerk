@@ -263,5 +263,3 @@
 </script>
 </body>
 </html>
-
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
