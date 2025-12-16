@@ -1,224 +1,255 @@
-<!DOCTYPE html>
-<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meerkat Miner</title>
+    <title>Meerkat Jump</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* RESET & NO SCROLLING */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
         body {
-            background-color: #000;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Stop scrolling completely */
-            position: fixed; /* Lock body in place */
-            width: 100%;
-            height: 100%;
+            background-color: #0f172a; /* Dark Blue Background */
+            overflow: hidden; /* NO SCROLLBARS */
+            touch-action: none; /* Stop zooming */
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* UI Overlay (Title & Score) */
+        #ui-layer {
+            position: absolute;
             top: 0;
             left: 0;
-        }
-
-        /* 1. TOP HEADER (Fixed to top) */
-        .header {
-            position: absolute;
-            top: 20px; /* Safe distance from top */
-            left: 0;
             width: 100%;
+            padding: 10px 0;
             text-align: center;
+            pointer-events: none; /* Let clicks pass through */
             z-index: 10;
         }
-        .balance-title { color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-        #balance { font-size: 48px; font-weight: 800; margin: 0; line-height: 1.2; }
-        .currency { color: #eab308; font-weight: bold; font-size: 14px; }
 
-        /* 2. CENTER GAME AREA (The Meerkat) */
-        .game-container {
+        h1 {
+            color: #22c55e; /* Green */
+            margin: 0;
+            font-size: 20px;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        #score {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Canvas fills the screen */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Start / Game Over Screens */
+        #menu {
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -60%); /* Shift up slightly so footer doesn't cover it */
-            width: auto;
-            height: auto;
-            z-index: 5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #clickBtn {
-            /* Responsive Circle: 70% of screen width, but max 300px */
-            width: 70vw;
-            height: 70vw;
-            max-width: 280px;
-            max-height: 280px;
-
-            background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04);
-            border-radius: 50%;
-            border: 8px solid #713f12;
-            box-shadow: 0 10px 40px rgba(234, 179, 8, 0.4);
-            
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 0.05s ease;
-        }
-
-        #clickBtn:active { transform: scale(0.95); }
-
-        /* The Emoji inside */
-        #clickBtn span {
-            font-size: 80px; 
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
-            pointer-events: none;
-        }
-
-        /* 3. BOTTOM FOOTER (Fixed to bottom) */
-        .footer {
-            position: absolute;
-            bottom: 30px; /* Force 30px up from bottom edge */
-            left: 50%;
-            transform: translateX(-50%);
-            width: 85%;
-            z-index: 10;
-        }
-        
-        .energy-text {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: #ccc;
-            font-weight: bold;
-        }
-        
-        .progress-bg {
-            background: #333;
-            height: 12px;
-            border-radius: 6px;
-            width: 100%;
-            overflow: hidden;
-            border: 1px solid #444;
-        }
-        
-        #energyBar {
-            background: linear-gradient(90deg, #eab308, #22c55e);
-            height: 100%;
-            width: 100%;
-            transition: width 0.1s linear;
-        }
-
-        /* Floating +1 Animation */
-        .pop {
-            position: absolute;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 30px;
+            border: 2px solid #22c55e;
+            border-radius: 15px;
+            text-align: center;
             color: white;
-            font-size: 28px;
-            font-weight: 900;
-            pointer-events: none;
-            animation: floatUp 0.8s ease-out forwards;
-            z-index: 100;
-            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            z-index: 20;
+            min-width: 200px;
         }
-        @keyframes floatUp {
-            0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+
+        button {
+            background: #22c55e;
+            color: black;
+            border: none;
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-top: 15px;
         }
+        
+        button:active { transform: scale(0.95); }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <div class="balance-title">Mining Balance</div>
-        <div id="balance">0</div>
-        <div class="currency">$MEERKAT</div>
+    <div id="ui-layer">
+        <h1>Meerkat Moon Jump</h1>
+        <div id="score">CAP: $0</div>
     </div>
 
-    <div class="game-container">
-        <div id="clickBtn" onclick="tap(event)">
-            <span>🐹</span>
-        </div>
-    </div>
+    <canvas id="gameCanvas"></canvas>
 
-    <div class="footer">
-        <div class="energy-text">
-            <span>⚡ Energy</span>
-            <span id="energyVal">500 / 500</span>
-        </div>
-        <div class="progress-bg">
-            <div id="energyBar"></div>
-        </div>
+    <div id="menu">
+        <h2 id="menuTitle" style="margin-top:0;">🚀 READY?</h2>
+        <p id="menuText">Tap Left / Right to Move</p>
+        <button onclick="startGame()">JUMP!</button>
     </div>
 
 <script>
-    // 1. TELEGRAM SETUP
-    const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand(); // Force full height
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const menu = document.getElementById('menu');
+    const scoreEl = document.getElementById('score');
 
-    // 2. FORCE HEIGHT FIX (Crucial for mobile)
-    // This constantly updates the body height to match the visible window
-    function setHeight() {
-        document.body.style.height = window.innerHeight + "px";
+    // 1. Setup Full Screen (Responsive)
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', setHeight);
-    setHeight(); // Call immediately
+    window.addEventListener('resize', resize);
+    resize();
 
-    // 3. GAME LOGIC
-    let coins = localStorage.getItem('meerkat_coins') ? parseInt(localStorage.getItem('meerkat_coins')) : 0;
-    let energy = 500;
-    const maxEnergy = 500;
+    // 2. Game Variables
+    let gameRunning = false;
+    let score = 0;
+    
+    // Physics Tuning (Make it Easier)
+    const GRAVITY = 0.25;
+    const JUMP_FORCE = -9.5; // Stronger jump
+    const MOVEMENT_SPEED = 5;
+    const PLATFORM_GAP = 85; // Closer platforms (was 100+)
 
-    // Update UI immediately
-    document.getElementById('balance').innerText = coins.toLocaleString();
+    let meerkat = { x: 0, y: 0, w: 30, h: 40, vx: 0, vy: 0 };
+    let platforms = [];
+    let keys = {};
 
-    function tap(e) {
-        if (energy > 0) {
-            coins++;
-            energy--;
-            
-            // Save & Update
-            localStorage.setItem('meerkat_coins', coins);
-            updateUI();
-            
-            // Haptics
-            if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+    // 3. Inputs (Touch + Keyboard)
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
+    
+    // Simple Touch Logic (Left/Right side of screen)
+    window.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const touchX = e.touches[0].clientX;
+        if (touchX < window.innerWidth / 2) keys['ArrowLeft'] = true;
+        else keys['ArrowRight'] = true;
+    }, {passive: false});
 
-            // Floating Text
-            showFloat(e.clientX, e.clientY);
-        } else {
-            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+    window.addEventListener('touchend', () => {
+        keys['ArrowLeft'] = false;
+        keys['ArrowRight'] = false;
+    });
+
+    // 4. Game Logic
+    function initGame() {
+        score = 0;
+        meerkat.x = canvas.width / 2 - 15;
+        meerkat.y = canvas.height - 150;
+        meerkat.vy = 0;
+        
+        platforms = [];
+        // Generate platforms starting from bottom
+        for (let y = canvas.height; y > -100; y -= PLATFORM_GAP) {
+            platforms.push({
+                x: Math.random() * (canvas.width - 70),
+                y: y,
+                w: 70, // Wider platforms (Easier)
+                h: 15
+            });
         }
+        
+        gameRunning = true;
+        menu.classList.add('hidden');
+        loop();
     }
 
-    function updateUI() {
-        document.getElementById('balance').innerText = coins.toLocaleString();
-        document.getElementById('energyVal').innerText = energy + " / " + maxEnergy;
-        document.getElementById('energyBar').style.width = (energy / maxEnergy * 100) + "%";
-    }
+    function loop() {
+        if (!gameRunning) return;
 
-    function showFloat(x, y) {
-        const float = document.createElement('div');
-        float.innerText = "+1";
-        float.className = 'pop';
-        float.style.left = x + "px";
-        float.style.top = y + "px";
-        document.body.appendChild(float);
-        setTimeout(() => float.remove(), 800);
-    }
+        // Move Left/Right
+        if (keys['ArrowLeft']) meerkat.x -= MOVEMENT_SPEED;
+        if (keys['ArrowRight']) meerkat.x += MOVEMENT_SPEED;
 
-    // Energy Regen
-    setInterval(() => {
-        if(energy < maxEnergy) {
-            energy++;
-            updateUI();
+        // Screen Wrap (Teleport from left to right)
+        if (meerkat.x < -meerkat.w) meerkat.x = canvas.width;
+        if (meerkat.x > canvas.width) meerkat.x = -meerkat.w;
+
+        // Apply Gravity
+        meerkat.vy += GRAVITY;
+        meerkat.y += meerkat.vy;
+
+        // Collision Check (Jump on platforms)
+        if (meerkat.vy > 0) { // Only check when falling down
+            platforms.forEach(p => {
+                if (meerkat.x + meerkat.w > p.x &&
+                    meerkat.x < p.x + p.w &&
+                    meerkat.y + meerkat.h > p.y &&
+                    meerkat.y + meerkat.h < p.y + p.h + 10) {
+                    
+                    meerkat.vy = JUMP_FORCE; // BOING!
+                }
+            });
         }
-    }, 1000);
 
+        // Camera Scroll (Infinite World)
+        if (meerkat.y < canvas.height / 2) {
+            let diff = (canvas.height / 2) - meerkat.y;
+            meerkat.y = canvas.height / 2;
+            score += Math.floor(diff);
+            
+            platforms.forEach(p => {
+                p.y += diff;
+                if (p.y > canvas.height) {
+                    // Recycle platform to top
+                    p.y = -20;
+                    p.x = Math.random() * (canvas.width - 70);
+                }
+            });
+        }
+
+        // Game Over (Fall off screen)
+        if (meerkat.y > canvas.height) {
+            gameOver();
+            return;
+        }
+
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Update Score Text
+        scoreEl.innerText = "CAP: $" + score.toLocaleString();
+
+        // Draw Platforms (Green Candles)
+        ctx.fillStyle = '#22c55e';
+        platforms.forEach(p => {
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            // Wick
+            ctx.fillStyle = '#14532d';
+            ctx.fillRect(p.x + p.w/2 - 2, p.y + p.h, 4, 20); 
+            ctx.fillStyle = '#22c55e';
+        });
+
+        // Draw Meerkat (Gold Box with Eyes)
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(meerkat.x, meerkat.y, meerkat.w, meerkat.h);
+        
+        // Eyes
+        ctx.fillStyle = 'black';
+        ctx.fillRect(meerkat.x + 5, meerkat.y + 10, 5, 5);
+        ctx.fillRect(meerkat.x + 20, meerkat.y + 10, 5, 5);
+    }
+
+    function gameOver() {
+        gameRunning = false;
+        document.getElementById('menuTitle').innerText = "💀 RUG PULL!";
+        document.getElementById('menuTitle').style.color = "#ef4444";
+        document.getElementById('menuText').innerText = "Final Cap: $" + score;
+        menu.classList.remove('hidden');
+    }
+
+    window.startGame = initGame;
 </script>
 </body>
 </html>
