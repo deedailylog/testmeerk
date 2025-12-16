@@ -3,303 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meerkat Moon Jump</title>
+    <title>Meerkat Miner</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* 1. RESET everything to fit single screen */
+        * { box-sizing: border-box; }
+        
         body {
+            background-color: #000;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
-            overflow: hidden;
-            background-color: #0f172a; /* Dark Crypto Theme */
-            font-family: 'Courier New', Courier, monospace;
-            touch-action: none; /* Disables scrolling/zooming */
-        }
-        canvas {
-            display: block;
-        }
-        #ui {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Let clicks pass through to canvas */
+            padding: 0;
+            height: 100vh; /* Full height */
+            height: 100dvh; /* Dynamic full height for mobile browsers */
+            overflow: hidden; /* No scrolling allowed */
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            align-items: center;
+            justify-content: space-between; /* Space out Top, Middle, Bottom */
+            touch-action: manipulation;
         }
-        #score {
+
+        /* 2. TOP SECTION (Score) */
+        .header {
+            padding-top: 20px;
             text-align: center;
-            color: #22c55e;
+            flex: 0 0 auto; /* Don't grow */
+        }
+        .balance-title { color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        #balance { font-size: 12vw; /* Text scales with screen width */ font-weight: 800; margin: 5px 0; }
+        .currency { color: #eab308; font-weight: bold; }
+
+        /* 3. MIDDLE SECTION (The Meerkat Button) */
+        .game-area {
+            flex: 1; /* Take up all available space */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        #clickBtn {
+            /* RESPONSIVE SIZE: Always 60% of the screen width */
+            width: 60vw; 
+            height: 60vw;
+            
+            /* Max limits so it doesn't get huge on desktop */
+            max-width: 300px; 
+            max-height: 300px;
+
+            background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04);
+            border-radius: 50%;
+            border: 8px solid #713f12; /* Dark Brown Border */
+            box-shadow: 0 10px 30px rgba(234, 179, 8, 0.3), inset 0 -10px 10px rgba(0,0,0,0.2);
+            
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            
+            /* Disable blue highlight on tap */
+            -webkit-tap-highlight-color: transparent; 
+            transition: transform 0.05s ease;
+        }
+
+        /* The Meerkat Face (Emoji size scales too) */
+        #clickBtn span {
+            font-size: 30vw; /* Icon is half the button size */
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3));
+            pointer-events: none; /* Let clicks pass to button */
+        }
+
+        #clickBtn:active { transform: scale(0.92); }
+
+        /* 4. BOTTOM SECTION (Energy) */
+        .footer {
+            width: 85%;
+            padding-bottom: 30px; /* Safe space from bottom */
+            flex: 0 0 auto;
+        }
+        
+        .energy-text {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #ccc;
+            font-weight: bold;
+        }
+        
+        .progress-bg {
+            background: #333;
+            height: 12px;
+            border-radius: 6px;
+            width: 100%;
+            overflow: hidden;
+            border: 1px solid #444;
+        }
+        
+        #energyBar {
+            background: linear-gradient(90deg, #eab308, #22c55e);
+            height: 100%;
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+
+        /* Floating +1 Animation */
+        .pop {
+            position: absolute;
+            color: white;
             font-size: 24px;
             font-weight: bold;
-            margin-top: 20px;
-            text-shadow: 2px 2px 0px #000;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 100;
         }
-        #startScreen, #gameOverScreen {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 25px;
-            border: 2px solid #22c55e;
-            border-radius: 15px;
-            text-align: center;
-            color: white;
-            pointer-events: auto; /* Enable clicking buttons */
-            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-            min-width: 250px;
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-80px) scale(1.5); opacity: 0; }
         }
-        button {
-            background: #22c55e;
-            color: black;
-            border: none;
-            padding: 12px 25px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 8px;
-            margin-top: 15px;
-            font-family: inherit;
-        }
-        button:active { transform: scale(0.95); }
-        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div id="score">CAP: $0</div>
+    <div class="header">
+        <div class="balance-title">Mining Balance</div>
+        <div id="balance">0</div>
+        <div class="currency">$MEERKAT</div>
     </div>
 
-    <div id="startScreen">
-        <h1 style="margin:0 0 10px 0;">Moon Jump 🚀</h1>
-        <p style="color:#aaa; font-size:14px;">Tap Left/Right to Move</p>
-        <button onclick="startGame()">START</button>
+    <div class="game-area">
+        <div id="clickBtn" onclick="tap(event)">
+            <span>🐹</span>
+        </div>
     </div>
 
-    <div id="gameOverScreen" class="hidden">
-        <h1 style="color: #ef4444; margin:0;">RUG PULL!</h1>
-        <p>You fell.</p>
-        <p>Final Cap: <span id="finalScore">$0</span></p>
-        <button onclick="resetGame()">AGAIN 🔄</button>
+    <div class="footer">
+        <div class="energy-text">
+            <span>⚡ Energy</span>
+            <span id="energyVal">500 / 500</span>
+        </div>
+        <div class="progress-bg">
+            <div id="energyBar"></div>
+        </div>
     </div>
-
-    <canvas id="gameCanvas"></canvas>
 
 <script>
-    // --- TELEGRAM SETUP ---
+    // 1. Initialize Telegram
     const tg = window.Telegram.WebApp;
     tg.ready();
-    tg.expand(); // Make full screen
-
-    // --- GAME SETUP ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    tg.expand();
     
-    // Resize canvas to fit ANY screen size
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // Fix: Force body height to handle mobile browser bars
+    document.body.style.height = window.innerHeight + "px";
 
-    let gameRunning = false;
-    let score = 0;
-    
-    // Meerkat Variables
-    let meerkat = {
-        x: canvas.width / 2,
-        y: canvas.height - 150,
-        w: 30,  // Slimmer body
-        h: 45,  // Taller body
-        vx: 0,
-        vy: 0,
-        speed: 6, // Faster movement
-        jump: -10
-    };
+    // 2. Game Data
+    let coins = localStorage.getItem('meerkat_coins') ? parseInt(localStorage.getItem('meerkat_coins')) : 0;
+    let energy = 500;
+    const maxEnergy = 500;
 
-    let gravity = 0.25;
-    let platforms = [];
+    // Update UI immediately
+    document.getElementById('balance').innerText = coins.toLocaleString();
 
-    // Controls
-    let keys = {};
-    window.addEventListener('keydown', (e) => keys[e.code] = true);
-    window.addEventListener('keyup', (e) => keys[e.code] = false);
+    function tap(e) {
+        if (energy > 0) {
+            // Logic
+            coins++;
+            energy--;
+            
+            // Save
+            localStorage.setItem('meerkat_coins', coins);
 
-    // Touch Controls
-    let touchX = null;
-    window.addEventListener('touchstart', (e) => {
-        touchX = e.touches[0].clientX;
-    });
-    window.addEventListener('touchmove', (e) => {
-        e.preventDefault(); // Stop scrolling
-        let currentX = e.touches[0].clientX;
-        if (currentX < window.innerWidth / 2) { keys['ArrowLeft'] = true; keys['ArrowRight'] = false; }
-        else { keys['ArrowRight'] = true; keys['ArrowLeft'] = false; }
-    });
-    window.addEventListener('touchend', () => {
-        keys['ArrowLeft'] = false;
-        keys['ArrowRight'] = false;
-    });
+            // Update UI
+            updateUI();
+            
+            // Haptics (Vibration)
+            if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
-    // --- DRAWING FUNCTIONS ---
-
-    function drawMeerkat(x, y, w, h) {
-        // 1. Body (Tan Color)
-        ctx.fillStyle = '#eab308'; 
-        ctx.beginPath();
-        ctx.roundRect(x, y, w, h, 10);
-        ctx.fill();
-
-        // 2. Belly (Lighter)
-        ctx.fillStyle = '#fde047';
-        ctx.beginPath();
-        ctx.ellipse(x + w/2, y + h/2 + 5, w/3, h/4, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 3. Eyes (Black Patches - Classic Meerkat)
-        ctx.fillStyle = 'black';
-        ctx.beginPath();
-        ctx.ellipse(x + 8, y + 12, 4, 3, 0, 0, Math.PI * 2); // Left
-        ctx.ellipse(x + w - 8, y + 12, 4, 3, 0, 0, Math.PI * 2); // Right
-        ctx.fill();
-
-        // 4. Eye Sparkle (White dots)
-        ctx.fillStyle = 'white';
-        ctx.fillRect(x + 7, y + 11, 2, 2);
-        ctx.fillRect(x + w - 9, y + 11, 2, 2);
-
-        // 5. Nose & Ears
-        ctx.fillStyle = '#713f12'; // Dark brown
-        ctx.beginPath();
-        ctx.arc(x + w/2, y + 18, 2, 0, Math.PI * 2); // Nose
-        ctx.fill();
-        
-        // Ears
-        ctx.beginPath();
-        ctx.arc(x, y + 8, 3, 0, Math.PI * 2); // Left Ear
-        ctx.arc(x + w, y + 8, 3, 0, Math.PI * 2); // Right Ear
-        ctx.fill();
-    }
-
-    function drawPlatform(p) {
-        // Green Candle Body
-        ctx.fillStyle = '#22c55e';
-        ctx.fillRect(p.x, p.y, p.w, p.h);
-        
-        // Wick (Visual only)
-        ctx.fillStyle = '#15803d'; 
-        ctx.fillRect(p.x + p.w/2 - 1, p.y + p.h, 2, 10); // Wick goes down
-    }
-
-    // --- GAME LOOP ---
-
-    function initPlatforms() {
-        platforms = [];
-        let count = Math.floor(canvas.height / 90); // Density based on screen height
-        for (let i = 0; i < count; i++) {
-            platforms.push({
-                x: Math.random() * (canvas.width - 60),
-                y: canvas.height - (i * 90) - 50,
-                w: 60,
-                h: 15
-            });
+            // Floating Text Effect
+            showFloat(e.clientX, e.clientY);
+        } else {
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
         }
     }
 
-    function update() {
-        if (!gameRunning) return;
+    function updateUI() {
+        document.getElementById('balance').innerText = coins.toLocaleString();
+        document.getElementById('energyVal').innerText = energy + " / " + maxEnergy;
+        document.getElementById('energyBar').style.width = (energy / maxEnergy * 100) + "%";
+    }
 
-        // Move Player
-        if (keys['ArrowLeft']) meerkat.x -= meerkat.speed;
-        if (keys['ArrowRight']) meerkat.x += meerkat.speed;
+    function showFloat(x, y) {
+        const float = document.createElement('div');
+        float.innerText = "+1";
+        float.className = 'pop';
+        float.style.left = x + "px";
+        float.style.top = y + "px";
+        document.body.appendChild(float);
+        setTimeout(() => float.remove(), 800);
+    }
 
-        // Screen Wrap
-        if (meerkat.x + meerkat.w < 0) meerkat.x = canvas.width;
-        if (meerkat.x > canvas.width) meerkat.x = -meerkat.w;
-
-        // Physics
-        meerkat.vy += gravity;
-        meerkat.y += meerkat.vy;
-
-        // Collision: Jump on Platforms (Green Candles)
-        if (meerkat.vy > 0) { 
-            platforms.forEach(p => {
-                if (
-                    meerkat.x + meerkat.w > p.x &&
-                    meerkat.x < p.x + p.w &&
-                    meerkat.y + meerkat.h > p.y &&
-                    meerkat.y + meerkat.h < p.y + p.h + 10 // Tolerance
-                ) {
-                    meerkat.vy = meerkat.jump;
-                    // Optional: Add simple sound effect here
-                }
-            });
+    // Energy Regen Loop
+    setInterval(() => {
+        if(energy < maxEnergy) {
+            energy++;
+            updateUI();
         }
-
-        // Camera Scroll (Infinite World)
-        if (meerkat.y < canvas.height / 2) {
-            let shift = (canvas.height / 2) - meerkat.y;
-            meerkat.y = canvas.height / 2;
-            score += Math.floor(shift);
-            document.getElementById('score').innerText = "CAP: $" + score.toLocaleString();
-
-            platforms.forEach(p => {
-                p.y += shift;
-                if (p.y > canvas.height) {
-                    p.y = -10;
-                    p.x = Math.random() * (canvas.width - 60);
-                }
-            });
-        }
-
-        // Game Over
-        if (meerkat.y > canvas.height) {
-            endGame();
-        }
-
-        draw();
-        requestAnimationFrame(update);
-    }
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw Platforms
-        platforms.forEach(p => drawPlatform(p));
-
-        // Draw Custom Meerkat
-        drawMeerkat(meerkat.x, meerkat.y, meerkat.w, meerkat.h);
-    }
-
-    function startGame() {
-        document.getElementById('startScreen').classList.add('hidden');
-        document.getElementById('gameOverScreen').classList.add('hidden');
-        score = 0;
-        meerkat.y = canvas.height - 150;
-        meerkat.vy = 0;
-        initPlatforms();
-        gameRunning = true;
-        update();
-    }
-
-    function resetGame() {
-        startGame();
-    }
-
-    function endGame() {
-        gameRunning = false;
-        document.getElementById('finalScore').innerText = "$" + score.toLocaleString();
-        document.getElementById('gameOverScreen').classList.remove('hidden');
-    }
-
-    // Initial Render
-    draw();
-
-    // Handle Window Resize (if user rotates phone)
-    window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        draw();
-    });
+    }, 1000);
 
 </script>
 </body>
