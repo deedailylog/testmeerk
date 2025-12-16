@@ -6,83 +6,86 @@
     <title>Meerkat Miner</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* 1. RESET everything to fit single screen */
-        * { box-sizing: border-box; }
+        /* RESET & NO SCROLLING */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body {
             background-color: #000;
             color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
-            height: 100vh; /* Full height */
-            height: 100dvh; /* Dynamic full height for mobile browsers */
-            overflow: hidden; /* No scrolling allowed */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between; /* Space out Top, Middle, Bottom */
-            touch-action: manipulation;
+            overflow: hidden; /* Stop scrolling completely */
+            position: fixed; /* Lock body in place */
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
         }
 
-        /* 2. TOP SECTION (Score) */
+        /* 1. TOP HEADER (Fixed to top) */
         .header {
-            padding-top: 20px;
+            position: absolute;
+            top: 20px; /* Safe distance from top */
+            left: 0;
+            width: 100%;
             text-align: center;
-            flex: 0 0 auto; /* Don't grow */
+            z-index: 10;
         }
-        .balance-title { color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-        #balance { font-size: 12vw; /* Text scales with screen width */ font-weight: 800; margin: 5px 0; }
-        .currency { color: #eab308; font-weight: bold; }
+        .balance-title { color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        #balance { font-size: 48px; font-weight: 800; margin: 0; line-height: 1.2; }
+        .currency { color: #eab308; font-weight: bold; font-size: 14px; }
 
-        /* 3. MIDDLE SECTION (The Meerkat Button) */
-        .game-area {
-            flex: 1; /* Take up all available space */
+        /* 2. CENTER GAME AREA (The Meerkat) */
+        .game-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -60%); /* Shift up slightly so footer doesn't cover it */
+            width: auto;
+            height: auto;
+            z-index: 5;
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 100%;
         }
 
         #clickBtn {
-            /* RESPONSIVE SIZE: Always 60% of the screen width */
-            width: 60vw; 
-            height: 60vw;
-            
-            /* Max limits so it doesn't get huge on desktop */
-            max-width: 300px; 
-            max-height: 300px;
+            /* Responsive Circle: 70% of screen width, but max 300px */
+            width: 70vw;
+            height: 70vw;
+            max-width: 280px;
+            max-height: 280px;
 
             background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04);
             border-radius: 50%;
-            border: 8px solid #713f12; /* Dark Brown Border */
-            box-shadow: 0 10px 30px rgba(234, 179, 8, 0.3), inset 0 -10px 10px rgba(0,0,0,0.2);
+            border: 8px solid #713f12;
+            box-shadow: 0 10px 40px rgba(234, 179, 8, 0.4);
             
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            position: relative;
-            
-            /* Disable blue highlight on tap */
-            -webkit-tap-highlight-color: transparent; 
             transition: transform 0.05s ease;
         }
 
-        /* The Meerkat Face (Emoji size scales too) */
+        #clickBtn:active { transform: scale(0.95); }
+
+        /* The Emoji inside */
         #clickBtn span {
-            font-size: 30vw; /* Icon is half the button size */
-            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.3));
-            pointer-events: none; /* Let clicks pass to button */
+            font-size: 80px; 
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
+            pointer-events: none;
         }
 
-        #clickBtn:active { transform: scale(0.92); }
-
-        /* 4. BOTTOM SECTION (Energy) */
+        /* 3. BOTTOM FOOTER (Fixed to bottom) */
         .footer {
+            position: absolute;
+            bottom: 30px; /* Force 30px up from bottom edge */
+            left: 50%;
+            transform: translateX(-50%);
             width: 85%;
-            padding-bottom: 30px; /* Safe space from bottom */
-            flex: 0 0 auto;
+            z-index: 10;
         }
         
         .energy-text {
@@ -114,16 +117,16 @@
         .pop {
             position: absolute;
             color: white;
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 28px;
+            font-weight: 900;
             pointer-events: none;
             animation: floatUp 0.8s ease-out forwards;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
             z-index: 100;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
         @keyframes floatUp {
             0% { transform: translateY(0) scale(1); opacity: 1; }
-            100% { transform: translateY(-80px) scale(1.5); opacity: 0; }
+            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
         }
     </style>
 </head>
@@ -135,7 +138,7 @@
         <div class="currency">$MEERKAT</div>
     </div>
 
-    <div class="game-area">
+    <div class="game-container">
         <div id="clickBtn" onclick="tap(event)">
             <span>🐹</span>
         </div>
@@ -152,15 +155,20 @@
     </div>
 
 <script>
-    // 1. Initialize Telegram
+    // 1. TELEGRAM SETUP
     const tg = window.Telegram.WebApp;
     tg.ready();
-    tg.expand();
-    
-    // Fix: Force body height to handle mobile browser bars
-    document.body.style.height = window.innerHeight + "px";
+    tg.expand(); // Force full height
 
-    // 2. Game Data
+    // 2. FORCE HEIGHT FIX (Crucial for mobile)
+    // This constantly updates the body height to match the visible window
+    function setHeight() {
+        document.body.style.height = window.innerHeight + "px";
+    }
+    window.addEventListener('resize', setHeight);
+    setHeight(); // Call immediately
+
+    // 3. GAME LOGIC
     let coins = localStorage.getItem('meerkat_coins') ? parseInt(localStorage.getItem('meerkat_coins')) : 0;
     let energy = 500;
     const maxEnergy = 500;
@@ -170,20 +178,17 @@
 
     function tap(e) {
         if (energy > 0) {
-            // Logic
             coins++;
             energy--;
             
-            // Save
+            // Save & Update
             localStorage.setItem('meerkat_coins', coins);
-
-            // Update UI
             updateUI();
             
-            // Haptics (Vibration)
+            // Haptics
             if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
-            // Floating Text Effect
+            // Floating Text
             showFloat(e.clientX, e.clientY);
         } else {
             if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
@@ -206,7 +211,7 @@
         setTimeout(() => float.remove(), 800);
     }
 
-    // Energy Regen Loop
+    // Energy Regen
     setInterval(() => {
         if(energy < maxEnergy) {
             energy++;
